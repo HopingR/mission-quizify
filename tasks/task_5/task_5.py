@@ -5,7 +5,6 @@ sys.path.append(os.path.abspath('../../'))
 from tasks.task_3.task_3 import DocumentProcessor
 from tasks.task_4.task_4 import EmbeddingClient
 
-
 # Import Task libraries
 from langchain_core.documents import Document
 from langchain.text_splitter import CharacterTextSplitter
@@ -54,22 +53,32 @@ class ChromaCollectionCreator:
             return
 
         # Step 2: Split documents into text chunks
-        # Use a TextSplitter from Langchain to split the documents into smaller text chunks
-        # https://python.langchain.com/docs/modules/data_connection/document_transformers/character_text_splitter
-        # [Your code here for splitting documents]
+        # Use CharacterTextSplitter to split the documents into smaller text chunks
+        text_splitter = CharacterTextSplitter(
+            separator="\n",  # Choose an appropriate separator (newline for example)
+            chunk_size=500,  # Define chunk size (adjust as needed)
+            chunk_overlap=50  # Define overlap size (adjust as needed)
+        )
         
-        if texts is not None:
-            st.success(f"Successfully split pages to {len(texts)} documents!", icon="✅")
+        texts = []
+        for page in self.processor.pages:
+            # Split each page content into chunks
+            split_texts = text_splitter.split_text(page.content)
+            texts.extend(split_texts)
+
+        if texts:
+            st.success(f"Successfully split pages into {len(texts)} chunks!", icon="✅")
+        else:
+            st.error("Failed to split pages into text chunks.", icon="🚨")
+            return
 
         # Step 3: Create the Chroma Collection
-        # https://docs.trychroma.com/
-        # Create a Chroma in-memory client using the text chunks and the embeddings model
-        # [Your code here for creating Chroma collection]
-        
-        if self.db:
+        # Using the embeddings model to create an in-memory Chroma collection
+        try:
+            self.db = Chroma.from_documents(texts, self.embed_model)
             st.success("Successfully created Chroma Collection!", icon="✅")
-        else:
-            st.error("Failed to create Chroma Collection!", icon="🚨")
+        except Exception as e:
+            st.error(f"Failed to create Chroma Collection: {e}", icon="🚨")
     
     def query_chroma_collection(self, query) -> Document:
         """
@@ -93,7 +102,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR PROJECT ID HERE",
+        "project": "geminiquizify-422815",
         "location": "us-central1"
     }
     

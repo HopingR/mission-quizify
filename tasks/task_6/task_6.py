@@ -1,12 +1,8 @@
 import sys
 import os
 import streamlit as st
-sys.path.append(os.path.abspath('../../'))
-from tasks.task_3.task_3 import DocumentProcessor
-from tasks.task_4.task_4 import EmbeddingClient
-from tasks.task_5.task_5 import ChromaCollectionCreator
 
-f"""
+"""
 Task: Build a Quiz Builder with Streamlit and LangChain
 
 Overview:
@@ -36,50 +32,82 @@ Implementation Guidance:
 - Post form submission, verify that the documents have been processed and that a Chroma collection has been successfully created. The build-in methods will communicate the outcome of these operations to the user through appropriate feedback.
 
 - Lastly, introduce a query input field post-Chroma collection creation. This field will gather user queries for generating quiz questions, showcasing the utility of the Chroma collection in sourcing information relevant to the quiz topic.
-
 """
 
+# Add the parent directory to the system path
+sys.path.append(os.path.abspath('../../'))
+
+# Import necessary classes from previous tasks
+from tasks.task_3.task_3 import DocumentProcessor
+from tasks.task_4.task_4 import EmbeddingClient
+from tasks.task_5.task_5 import ChromaCollectionCreator
+
 if __name__ == "__main__":
-    st.header("Quizzify")
+    st.header("Quizzify: Build a Quiz from Documents")
 
     # Configuration for EmbeddingClient
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR PROJECT ID HERE",
+        "project": "geminiquizify-422815",
         "location": "us-central1"
     }
-    
-    screen = st.empty() # Screen 1, ingest documents
-    with screen.container():
-        st.header("Quizzify")
-        ####### YOUR CODE HERE #######
-        # 1) Initalize DocumentProcessor and Ingest Documents from Task 3
-        # 2) Initalize the EmbeddingClient from Task 4 with embed config
-        # 3) Initialize the ChromaCollectionCreator from Task 5
-        ####### YOUR CODE HERE #######
 
-        with st.form("Load Data to Chroma"):
-            st.subheader("Quiz Builder")
-            st.write("Select PDFs for Ingestion, the topic for the quiz, and click Generate!")
-            
-            ####### YOUR CODE HERE #######
-            # 4) Use streamlit widgets to capture the user's input
-            # 4) for the quiz topic and the desired number of questions
-            ####### YOUR CODE HERE #######
-            
-            document = None
-            
-            submitted = st.form_submit_button("Generate a Quiz!")
-            if submitted:
-                ####### YOUR CODE HERE #######
-                # 5) Use the create_chroma_collection() method to create a Chroma collection from the processed documents
-                ####### YOUR CODE HERE #######
-                    
-                # Uncomment the following lines to test the query_chroma_collection() method
-                # document = chroma_creator.query_chroma_collection(topic_input) 
-                
-    if document:
-        screen.empty() # Screen 2
-        with st.container():
-            st.header("Query Chroma for Topic, top Document: ")
-            st.write(document)
+    # Initialize components
+    document_processor = DocumentProcessor()
+    embedding_client = EmbeddingClient(
+        model_name=embed_config["model_name"],
+        project=embed_config["project"],
+        location=embed_config["location"]
+    )
+    chroma_creator = ChromaCollectionCreator(document_processor, embedding_client)
+
+    # Create a section for document ingestion and quiz setup
+    with st.form("Load Data to Chroma"):
+        st.subheader("Quiz Builder")
+        st.write("Upload PDFs, specify a quiz topic, and generate a quiz!")
+
+        # File uploader for documents
+        uploaded_files = st.file_uploader("Upload PDF Documents", type=["pdf"], accept_multiple_files=True)
+
+        # Input for quiz topic
+        quiz_topic = st.text_input("Enter Quiz Topic")
+
+        # Slider for the number of questions
+        num_questions = st.slider("Select Number of Questions", min_value=1, max_value=20, value=5)
+
+        # Submit button
+        submitted = st.form_submit_button("Generate a Quiz!")
+
+        # Process and generate Chroma collection upon submission
+        if submitted:
+            if uploaded_files and quiz_topic:
+                try:
+                    # Ingest uploaded documents
+                    st.write("Processing documents...")
+                    document_processor.ingest_documents(uploaded_files)  # Pass uploaded files
+
+                    # Create Chroma collection
+                    st.write("Creating Chroma collection...")
+                    chroma_creator.create_chroma_collection()
+
+                    # Provide feedback to the user
+                    st.success("Chroma collection created successfully! You can now query the collection.")
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+            else:
+                st.warning("Please upload documents and specify a quiz topic.")
+
+    # Section for querying Chroma collection
+    with st.container():
+        st.subheader("Query Chroma Collection")
+        query = st.text_input("Enter a Query Related to the Quiz Topic")
+
+        if query:
+            try:
+                # Query the Chroma collection
+                st.write("Fetching relevant information...")
+                document = chroma_creator.query_chroma_collection(query)
+                st.write("Top Document Results:")
+                st.write(document)
+            except Exception as e:
+                st.error(f"An error occurred while querying: {e}")

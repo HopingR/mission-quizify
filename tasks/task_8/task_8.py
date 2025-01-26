@@ -125,11 +125,12 @@ class QuizGenerator:
 
         for _ in range(self.num_questions):
             ##### YOUR CODE HERE #####
-            question_str = # Use class method to generate question
+            question_str = self.generate_question_with_vectorstore()  # Use class method to generate question
             
             ##### YOUR CODE HERE #####
             try:
                 # Convert the JSON String to a dictionary
+                question = json.loads(question_str)
             except json.JSONDecodeError:
                 print("Failed to decode question JSON.")
                 continue  # Skip this iteration if JSON decoding fails
@@ -140,6 +141,7 @@ class QuizGenerator:
             if self.validate_question(question):
                 print("Successfully generated unique question")
                 # Add the valid and unique question to the bank
+                self.question_bank.append(question)
             else:
                 print("Duplicate or invalid question detected.")
             ##### YOUR CODE HERE #####
@@ -166,11 +168,14 @@ class QuizGenerator:
 
         Note: This method assumes `question` is a valid dictionary and `question_bank` has been properly initialized.
         """
-        ##### YOUR CODE HERE #####
         # Consider missing 'question' key as invalid in the dict object
+        question_text = question.get("question", "")
+        
         # Check if a question with the same text already exists in the self.question_bank
-        ##### YOUR CODE HERE #####
-        return is_unique
+        for existing_question in self.question_bank:
+            if existing_question.get("question") == question_text:
+                return False  # Found a duplicate question
+        return True
 
 
 # Test Generating the Quiz
@@ -178,7 +183,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "geminiquizify-422815",
         "location": "us-central1"
     }
     
